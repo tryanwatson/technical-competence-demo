@@ -1,13 +1,5 @@
 import { useRef, useEffect } from "react";
-
-type MessageRole = "user" | "agent" | "system";
-
-interface Message {
-  id: string;
-  role: MessageRole;
-  content: string;
-  timestamp: Date;
-}
+import type { Message } from "@/app/lib/types";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -15,6 +7,7 @@ interface ChatWindowProps {
   onInputChange: (value: string) => void;
   onSendMessage: () => void;
   isLocked: boolean;
+  isAgentTyping: boolean;
 }
 
 function ChatBubble({ message }: { message: Message }) {
@@ -36,11 +29,23 @@ function ChatBubble({ message }: { message: Message }) {
             isUser ? "text-blue-200" : "text-gray-400"
           }`}
         >
-          {message.timestamp.toLocaleTimeString([], {
+          {new Date(message.timestamp).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           })}
         </p>
+      </div>
+    </div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start">
+      <div className="flex items-center gap-1 rounded-2xl bg-gray-100 px-4 py-3">
+        <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+        <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+        <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
       </div>
     </div>
   );
@@ -52,12 +57,15 @@ export function ChatWindow({
   onInputChange,
   onSendMessage,
   isLocked,
+  isAgentTyping,
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isAgentTyping]);
+
+  const isDisabled = isLocked || isAgentTyping;
 
   return (
     <div className="flex flex-1 flex-col rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -87,6 +95,7 @@ export function ChatWindow({
             {messages.map((msg) => (
               <ChatBubble key={msg.id} message={msg} />
             ))}
+            {isAgentTyping && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -108,14 +117,16 @@ export function ChatWindow({
             placeholder={
               isLocked
                 ? "Enter your phone number above to start..."
-                : "Type your message..."
+                : isAgentTyping
+                  ? "Waiting for response..."
+                  : "Type your message..."
             }
-            disabled={isLocked}
+            disabled={isDisabled}
             className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
           />
           <button
             type="submit"
-            disabled={isLocked || !inputValue.trim()}
+            disabled={isDisabled || !inputValue.trim()}
             className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Send
