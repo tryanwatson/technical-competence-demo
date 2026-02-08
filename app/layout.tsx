@@ -28,12 +28,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <nav className="flex justify-end gap-4 p-4">
-          <Link href="/" className="text-foreground/70 hover:text-foreground text-sm">
-            Home
+        <nav className="flex justify-center gap-8 border-b border-foreground/10 p-4">
+          <Link href="/" className="text-foreground/70 hover:text-foreground text-sm font-medium">
+            Chat
           </Link>
-          <Link href="/users" className="text-foreground/70 hover:text-foreground text-sm">
-            Users
+          <Link href="/voice" className="text-foreground/70 hover:text-foreground text-sm font-medium">
+            Voice
+          </Link>
+          <Link href="/users" className="text-foreground/70 hover:text-foreground text-sm font-medium">
+            DB Table
           </Link>
         </nav>
         {children}

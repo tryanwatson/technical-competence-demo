@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/app/db";
+import { getSql } from "@/app/db";
 import type { LookupResponse } from "@/app/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const sql = getSql();
     const rows = await sql`
       SELECT tech_competence FROM users WHERE phone_number = ${phoneNumber}
     `;

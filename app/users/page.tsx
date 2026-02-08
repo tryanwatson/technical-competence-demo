@@ -1,4 +1,6 @@
-import { sql } from "../db";
+import { getSql } from "../db";
+
+export const dynamic = "force-dynamic";
 
 interface User {
   id: number;
@@ -8,6 +10,7 @@ interface User {
 }
 
 export default async function UsersPage() {
+  const sql = getSql();
   const users = (await sql`SELECT * FROM users`) as User[];
 
   return (
@@ -20,18 +23,24 @@ export default async function UsersPage() {
           <thead>
             <tr className="border-b border-foreground/20">
               <th className="py-2 pr-4 font-semibold text-foreground/70">ID</th>
-              <th className="py-2 pr-4 font-semibold text-foreground/70">Name</th>
-              <th className="py-2 pr-4 font-semibold text-foreground/70">Phone Number</th>
-              <th className="py-2 font-semibold text-foreground/70">Tech Competence</th>
+              <th className="py-2 pr-4 font-semibold text-foreground/70">
+                Phone Number
+              </th>
+              <th className="py-2 font-semibold text-foreground/70">
+                Tech Competence
+              </th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-b border-foreground/10">
                 <td className="py-2 pr-4 text-foreground/60">{user.id}</td>
-                <td className="py-2 pr-4 text-foreground">{user.name}</td>
-                <td className="py-2 pr-4 text-foreground/60">{user.phone_number}</td>
-                <td className="py-2 text-foreground/60">{user.tech_competence ? "Yes" : "No"}</td>
+                <td className="py-2 pr-4 text-foreground/60">
+                  {user.phone_number}
+                </td>
+                <td className="py-2 text-foreground/60">
+                  {user.tech_competence ? "Yes" : "No"}
+                </td>
               </tr>
             ))}
           </tbody>

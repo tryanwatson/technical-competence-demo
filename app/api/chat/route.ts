@@ -8,7 +8,7 @@ import {
   L1_DIRECT_SYSTEM_PROMPT,
   L2_DIRECT_SYSTEM_PROMPT,
 } from "@/app/lib/agents";
-import { sql } from "@/app/db";
+import { getSql } from "@/app/db";
 import type { ChatRequest, ChatResponse, Message } from "@/app/lib/types";
 
 const READY_MARKER = "[READY_TO_ROUTE]";
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       // Write categorization to DB (best-effort, non-blocking)
       if (phoneNumber) {
         try {
+          const sql = getSql();
           await sql`
             INSERT INTO users (name, phone_number, tech_competence)
             VALUES (NULL, ${phoneNumber}, ${isTechnical})
