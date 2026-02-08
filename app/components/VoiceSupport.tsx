@@ -31,6 +31,16 @@ export function VoiceSupport() {
   const ringbackRef = useRef<HTMLAudioElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
+  const playRingback = useCallback(async () => {
+    if (ringbackRef.current) {
+      ringbackRef.current.currentTime = 0;
+      ringbackRef.current.play();
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      ringbackRef.current.pause();
+      ringbackRef.current.currentTime = 0;
+    }
+  }, []);
+
   const cleanup = useCallback(() => {
     if (pcRef.current) {
       pcRef.current.close();
@@ -43,6 +53,10 @@ export function VoiceSupport() {
     }
     if (audioRef.current) {
       audioRef.current.srcObject = null;
+    }
+    if (ringbackRef.current) {
+      ringbackRef.current.pause();
+      ringbackRef.current.currentTime = 0;
     }
   }, []);
 
@@ -208,8 +222,7 @@ export function VoiceSupport() {
       setRoutingLabel(tierLabel);
       cleanup();
 
-      // Brief pause so user sees the routing message
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await playRingback();
 
       try {
         await connectSession(nextPhase, {
@@ -223,7 +236,7 @@ export function VoiceSupport() {
         setCallStatus("ended");
       }
     },
-    [cleanup, connectSession]
+    [cleanup, connectSession, playRingback]
   );
 
   const handleDataChannelMessage = useCallback(
@@ -267,11 +280,11 @@ export function VoiceSupport() {
         setRoutingLabel(tierLabel);
         setCallStatus("routing");
 
-        // Brief pause to show "Welcome back" message
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await playRingback();
 
         await connectSession(nextPhase, { hasIvrContext: false });
       } else {
+        await playRingback();
         await connectSession("ivr");
       }
     } catch (err) {
@@ -596,6 +609,7 @@ export function VoiceSupport() {
         </div>
       </main>
       <audio ref={audioRef} autoPlay playsInline className="hidden" />
+      <audio ref={ringbackRef} src="/freesound_community-cell_phone_tone_ringback_3_times-77262.mp3" preload="auto" className="hidden" />
     </div>
   );
 }
