@@ -33,7 +33,8 @@ export function SupportChat() {
 
   const callChatAPI = async (
     phase: "ivr" | "l1" | "l2",
-    currentMessages: Message[]
+    currentMessages: Message[],
+    hasIvrContext: boolean = true
   ): Promise<ChatResponse> => {
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -42,6 +43,7 @@ export function SupportChat() {
         phase,
         messages: currentMessages,
         phoneNumber,
+        hasIvrContext,
       }),
     });
 
@@ -55,12 +57,37 @@ export function SupportChat() {
 
   const handlePhoneSubmit = async () => {
     if (!phoneNumber.trim()) return;
-    setChatPhase("ivr");
     setIsAgentTyping(true);
 
     try {
-      const data = await callChatAPI("ivr", []);
-      addMessage("agent", data.agentMessage);
+      // Check DB for existing competence rating
+      const lookupRes = await fetch("/api/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber }),
+      });
+      const lookupData = await lookupRes.json();
+
+      if (lookupData.found) {
+        // Known user: skip IVR, route directly
+        const nextPhase = lookupData.techCompetence ? "l2" : "l1";
+        const tierLabel =
+          nextPhase === "l2" ? "Level 2 (Advanced)" : "Level 1 (General)";
+
+        setChatPhase(nextPhase);
+        addMessage(
+          "system",
+          `Welcome back! Routing you directly to ${tierLabel} support...`
+        );
+
+        const data = await callChatAPI(nextPhase, [], false);
+        addMessage("agent", data.agentMessage);
+      } else {
+        // Unknown user: normal IVR flow
+        setChatPhase("ivr");
+        const data = await callChatAPI("ivr", []);
+        addMessage("agent", data.agentMessage);
+      }
     } catch (error) {
       addMessage("system", "Connection error. Please try again.");
       console.error(error);

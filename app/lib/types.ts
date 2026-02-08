@@ -13,6 +13,7 @@ export interface ChatRequest {
   phase: "ivr" | "l1" | "l2";
   messages: Message[];
   phoneNumber: string;
+  hasIvrContext?: boolean;
 }
 
 export interface ChatResponse {
@@ -21,4 +22,9 @@ export interface ChatResponse {
     category: "technical" | "non-technical";
     nextPhase: "l1" | "l2";
   };
+}
+
+export interface LookupResponse {
+  found: boolean;
+  techCompetence?: boolean;
 }

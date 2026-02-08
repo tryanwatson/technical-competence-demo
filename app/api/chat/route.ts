@@ -5,7 +5,10 @@ import {
   CATEGORIZATION_PROMPT,
   L1_SYSTEM_PROMPT,
   L2_SYSTEM_PROMPT,
+  L1_DIRECT_SYSTEM_PROMPT,
+  L2_DIRECT_SYSTEM_PROMPT,
 } from "@/app/lib/agents";
+import { sql } from "@/app/db";
 import type { ChatRequest, ChatResponse, Message } from "@/app/lib/types";
 
 const READY_MARKER = "[READY_TO_ROUTE]";
@@ -19,14 +22,14 @@ function toOpenAIMessages(messages: Message[]): LLMMessage[] {
     }));
 }
 
-function getSystemPrompt(phase: string): string {
+function getSystemPrompt(phase: string, hasIvrContext: boolean): string {
   switch (phase) {
     case "ivr":
       return IVR_SYSTEM_PROMPT;
     case "l1":
-      return L1_SYSTEM_PROMPT;
+      return hasIvrContext ? L1_SYSTEM_PROMPT : L1_DIRECT_SYSTEM_PROMPT;
     case "l2":
-      return L2_SYSTEM_PROMPT;
+      return hasIvrContext ? L2_SYSTEM_PROMPT : L2_DIRECT_SYSTEM_PROMPT;
     default:
       throw new Error(`Unknown phase: ${phase}`);
   }
@@ -35,7 +38,8 @@ function getSystemPrompt(phase: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { phase, messages } = body;
+    const { phase, messages, phoneNumber } = body;
+    const hasIvrContext = body.hasIvrContext !== false;
 
     if (!phase || !messages) {
       return NextResponse.json(
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const openaiMessages = toOpenAIMessages(messages);
-    const systemPrompt = getSystemPrompt(phase);
+    const systemPrompt = getSystemPrompt(phase, hasIvrContext);
 
     let agentReply = await getCompletion(systemPrompt, openaiMessages);
 
@@ -68,6 +72,19 @@ export async function POST(request: NextRequest) {
       const normalized = categoryRaw.toLowerCase().trim();
       const isTechnical =
         normalized === "technical" || normalized === '"technical"';
+
+      // Write categorization to DB (best-effort, non-blocking)
+      if (phoneNumber) {
+        try {
+          await sql`
+            INSERT INTO users (name, phone_number, tech_competence)
+            VALUES (NULL, ${phoneNumber}, ${isTechnical})
+            ON CONFLICT (phone_number) DO UPDATE SET tech_competence = ${isTechnical}
+          `;
+        } catch (dbError) {
+          console.error("Failed to write user categorization to DB:", dbError);
+        }
+      }
 
       const response: ChatResponse = {
         agentMessage: agentReply,
